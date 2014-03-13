@@ -26,20 +26,27 @@ public class HMM {
 		transition_map=new HashMap<String,TransitionUnit>();
 	}
 	
-	public void getForwardProbArray(ArrayList<Double> alphaList,HashMap<String,Double> prevMap,String[] line,int i){
-		HashMap<String,Double> newPrevMap=new HashMap<String,Double>();
-		if(i==0){
-			alphaList.add(1.0);
-			newPrevMap.put(start_symbol,1.0);
-			getForwardProbArray(alphaList,newPrevMap,line,i+1);
-		}else if(i<line.length+1){
-			
-		}else{
-			//the ending symbol
-		}
-		
-		
-	}
+//	public void getForwardProbArray(ArrayList<Double> alphaList,HashMap<String,Double> prevMap,String[] line,int i){
+//		HashMap<String,Double> newPrevMap=new HashMap<String,Double>();
+//		if(i==0){
+//			alphaList.add(1.0);
+//			newPrevMap.put(start_symbol,1.0);
+//			getForwardProbArray(alphaList,newPrevMap,line,i+1);
+//		}else if(i<line.length+1){
+//			double curAlpha=0;
+//			TransitionUnit transSubMap=transition_map.get();
+//			for(String prevY:prevMap.keySet()){
+//				TransitionUnit tempMap=transition_map.get(prevY);
+//				curAlpha+=prevMap.get(prevY)*tempMap.state_transition.get()
+//			}
+//			
+//		}else{
+//			//the ending symbol
+//			
+//		}
+//		
+//		
+//	}
 	
 	public static void main(String[] args){
 		
