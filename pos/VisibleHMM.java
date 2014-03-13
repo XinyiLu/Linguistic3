@@ -43,9 +43,19 @@ public class VisibleHMM {
 		}
 	}
 	
+	class PrecisionUnit{
+		int correct_count;
+		int total_count;
+		
+		public PrecisionUnit(){
+			correct_count=0;
+			total_count=0;
+		}
+	}
+	
 	final static String start_symbol=Character.toString((char)Character.START_PUNCTUATION);
 	final static String end_symbol=Character.toString((char)Character.END_PUNCTUATION);
-	final static String unknown_word="*U*";
+	final static String unknown_word="*UNK*";
 	private HashMap<String,TransitionUnit> transition_map;
 	
 	
@@ -167,23 +177,53 @@ public class VisibleHMM {
 		try {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(inputFile),"ISO-8859-1"));
 			String line=null;
+			int totalCount=0,correctCount=0;
 			//each time we read a line, count its words
 			while((line=reader.readLine())!=null){
 				ArrayList<HashMap<String,VertibiUnit>> vertibiMap=parseTestLineToVertibi(line);
 				ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
-				for(VertibiUnit unit:resultList){
-					System.out.print(unit.prevWord+" ");
+				String outputLine="";
+				for(int i=1;i<resultList.size()-1;i++){
+					VertibiUnit unit=resultList.get(i);
+					outputLine+=unit.prevWord+" ";
 				}
-				System.out.println();
+				
+				if(!outputLine.isEmpty()){
+					System.out.println(outputLine.substring(0,outputLine.length()-1));
+				}
+				/*PrecisionUnit unit=getVertibiPrecisionFromLine(line);
+				totalCount+=unit.total_count;
+				correctCount+=unit.correct_count;*/
+				
 			}
 			//close the buffered reader
 			reader.close();
-			
+			System.out.println("correct rate is:"+correctCount*1.0/totalCount);
 			
 		}catch(IOException e){
 			e.printStackTrace();
 		}
 	}
+	
+	public PrecisionUnit getVertibiPrecisionFromLine(String line){
+		PrecisionUnit unit=new PrecisionUnit();
+		String[] words=line.split(" ");
+		ArrayList<String> wordList=new ArrayList<String>();
+		assert(words.length>0&&words.length%2==0);
+		
+		for(int i=0;i<words.length;i+=2){
+			wordList.add(words[i]);
+		}
+		
+		ArrayList<HashMap<String,VertibiUnit>> vertibiMap=updateMuList(wordList);
+		ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
+		unit.total_count=words.length/2;
+		for(int i=0;i<words.length/2;i++){
+			unit.correct_count=(resultList.get(i+1).equals(words[2*i+1])?1:0);
+		}
+		return unit;
+	}
+
 	
 	public ArrayList<HashMap<String,VertibiUnit>> parseTestLineToVertibi(String line){
 		String[] words=line.split(" ");
