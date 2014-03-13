@@ -2,6 +2,7 @@ package pos;
 
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 
@@ -32,6 +33,15 @@ public class VisibleHMM {
 		}
 	}
 	
+	class VertibiUnit{
+		String prevWord;
+		double prob;
+		
+		public VertibiUnit(String word,double p){
+			prevWord=word;
+			prob=p;
+		}
+	}
 	
 	final static String start_symbol=Character.toString((char)Character.START_PUNCTUATION);
 	final static String end_symbol=Character.toString((char)Character.END_PUNCTUATION);
@@ -41,6 +51,13 @@ public class VisibleHMM {
 	
 	public VisibleHMM(){
 		transition_map=new HashMap<String,TransitionUnit>();
+	}
+	
+	public double getTerminalTransitionProb(String yWord,String xWord){
+		assert(transition_map.containsKey(yWord));
+		HashMap<String,DataUnit> terminalTransitionMap=transition_map.get(yWord).terminal_transition;
+		String newWord=(terminalTransitionMap.containsKey(xWord)?xWord:unknown_word);
+		return terminalTransitionMap.get(newWord).prob;
 	}
 	
 	public void readFileToTransitionMap(String fileName){
@@ -146,10 +163,111 @@ public class VisibleHMM {
 		}
 	}
 	
+	public void readTestFileToVertibi(String inputFile){
+		try {
+			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(inputFile),"ISO-8859-1"));
+			String line=null;
+			//each time we read a line, count its words
+			while((line=reader.readLine())!=null){
+				ArrayList<HashMap<String,VertibiUnit>> vertibiMap=parseTestLineToVertibi(line);
+				ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
+				for(VertibiUnit unit:resultList){
+					System.out.print(unit.prevWord+" ");
+				}
+				System.out.println();
+			}
+			//close the buffered reader
+			reader.close();
+			
+			
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+	}
+	
+	public ArrayList<HashMap<String,VertibiUnit>> parseTestLineToVertibi(String line){
+		String[] words=line.split(" ");
+		ArrayList<String> wordList=new ArrayList<String>();
+		assert(words.length>0&&words.length%2==0);
+		
+		for(int i=0;i<words.length;i+=2){
+			wordList.add(words[i]);
+		}
+		
+		return updateMuList(wordList);
+	}
+	
+	public ArrayList<HashMap<String,VertibiUnit>> updateMuList(ArrayList<String> line){
+		ArrayList<HashMap<String,VertibiUnit>> list=new ArrayList<HashMap<String,VertibiUnit>>();
+		updateMuListHelper(list,line,0);
+		return list;
+	}
+	
+	public void updateMuListHelper(ArrayList<HashMap<String,VertibiUnit>> list,ArrayList<String> line,int i){
+		HashMap<String,VertibiUnit> mapUnit=new HashMap<String,VertibiUnit>();
+		if(i==0){
+			mapUnit.put(start_symbol,new VertibiUnit("",1.0));
+		}else if(i<line.size()){
+			String xWord=line.get(i);
+			//iterate through all possible ys after the previous ones
+			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
+			for(String prevY:prevMapUnit.keySet()){
+				TransitionUnit transitionSubMap=transition_map.get(prevY);
+				for(String yWord:transitionSubMap.state_transition.keySet()){
+					if(yWord.equals(end_symbol)){
+						continue;
+					}
+					double tempMu=prevMapUnit.get(prevY).prob*transitionSubMap.state_transition.get(yWord).prob*getTerminalTransitionProb(yWord,xWord);
+					if((!mapUnit.containsKey(yWord))||mapUnit.get(yWord).prob<tempMu){
+						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
+					}
+				}
+			}
+	
+		}else if(i==line.size()){
+			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
+			for(String prevY:prevMapUnit.keySet()){
+				TransitionUnit transitionSubMap=transition_map.get(prevY);
+				String yWord=end_symbol;
+				if(transitionSubMap.state_transition.containsKey(yWord)){
+					double tempMu=prevMapUnit.get(prevY).prob*transitionSubMap.state_transition.get(yWord).prob;
+					if((!mapUnit.containsKey(yWord))||mapUnit.get(yWord).prob<tempMu){
+						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
+					}
+				}
+				
+			}
+		}else{
+			return;
+		}
+		
+		list.add(mapUnit);
+		updateMuListHelper(list,line,i+1);
+	}
+	
+	public ArrayList<VertibiUnit> getMuList(ArrayList<HashMap<String,VertibiUnit>> vertibiMap){
+		ArrayList<VertibiUnit> muList=new ArrayList<VertibiUnit>();
+		getMuListHelper(muList,vertibiMap,end_symbol,vertibiMap.size()-1);
+		return muList;
+	}
+	
+	public void getMuListHelper(ArrayList<VertibiUnit> list,ArrayList<HashMap<String,VertibiUnit>> vertibiMap,String yWord,int i){
+		if(i<0){
+			return;
+		}
+		HashMap<String,VertibiUnit> unitMap=vertibiMap.get(i);
+		assert(unitMap.containsKey(yWord));
+		VertibiUnit unit=new VertibiUnit(yWord,unitMap.get(yWord).prob);
+		list.add(0,unit);
+		getMuListHelper(list,vertibiMap,unitMap.get(yWord).prevWord,i-1);
+	}
+	
 	public static void main(String[] args){
 		VisibleHMM hmm=new VisibleHMM();
 		hmm.readFileToTransitionMap(args[0]);
-		hmm.printTransitionMap();
+		//hmm.printTransitionMap();
+		hmm.readTestFileToVertibi(args[1]);
+		
 	}
 }
 
