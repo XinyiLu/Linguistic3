@@ -235,8 +235,11 @@ public class VisibleHMM {
 						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
 					}
 				}
-				
+				if(!mapUnit.containsKey(end_symbol)){
+					mapUnit.put(end_symbol,new VertibiUnit(prevY,0));
+				}
 			}
+			
 		}else{
 			return;
 		}
@@ -256,7 +259,6 @@ public class VisibleHMM {
 			return;
 		}
 		HashMap<String,VertibiUnit> unitMap=vertibiMap.get(i);
-		assert(unitMap.containsKey(yWord));
 		VertibiUnit unit=new VertibiUnit(yWord,unitMap.get(yWord).prob);
 		list.add(0,unit);
 		getMuListHelper(list,vertibiMap,unitMap.get(yWord).prevWord,i-1);
