@@ -69,7 +69,7 @@ public class VisibleHMM {
 		
 		//add the first start_symbol to the state count map
 		{
-			if(transition_map.containsKey(start_symbol)){
+			if(!transition_map.containsKey(start_symbol)){
 				transition_map.put(start_symbol,new TransitionUnit());
 			}
 			HashMap<String,DataUnit> state_transition_map=transition_map.get(start_symbol).state_transition;
@@ -86,7 +86,7 @@ public class VisibleHMM {
 				transition_map.put(yWord,new TransitionUnit());
 			}
 			TransitionUnit transitionSubMap=transition_map.get(yWord);
-			String nextY=(i==words.length?end_symbol:words[2*i+3]);
+			String nextY=((i==words.length/2-1)?end_symbol:words[2*i+3]);
 			if(!transitionSubMap.state_transition.containsKey(nextY)){
 				transitionSubMap.state_transition.put(nextY,new DataUnit());
 			}
@@ -130,10 +130,26 @@ public class VisibleHMM {
 		}
 	}
 	
+	public void printTransitionMap(){
+		for(String yWord:transition_map.keySet()){
+			TransitionUnit submap=transition_map.get(yWord);
+			System.out.println("Y:\t"+yWord);
+			System.out.println("X----------------------------");
+			for(String xWord:submap.terminal_transition.keySet()){
+				System.out.print(xWord+":"+submap.terminal_transition.get(xWord).prob+"\t");
+			}
+			System.out.println("\nY--------------------------");
+			for(String nextY:submap.state_transition.keySet()){
+				System.out.print(nextY+":"+submap.state_transition.get(nextY).prob+"\t");
+			}
+			System.out.println();
+		}
+	}
 	
 	public static void main(String[] args){
 		VisibleHMM hmm=new VisibleHMM();
-		
+		hmm.readFileToTransitionMap(args[0]);
+		hmm.printTransitionMap();
 	}
 }
 

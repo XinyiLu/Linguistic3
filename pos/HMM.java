@@ -48,11 +48,7 @@ public class HMM {
 //		
 //	}
 	
-	public static void main(String[] args){
-		
-		
-	}
-	
+
 	
 	
 }
