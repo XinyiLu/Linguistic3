@@ -270,8 +270,6 @@ public class VisibleHMM {
 	
 		}else if(i==line.size()+1){
 			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
-			String bestPrev="";
-			double bestProb=Integer.MIN_VALUE;
 			for(String prevY:prevMapUnit.keySet()){
 				TransitionUnit transitionSubMap=transition_map.get(prevY);
 				String yWord=end_symbol;
@@ -281,14 +279,8 @@ public class VisibleHMM {
 						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
 					}
 				}
-				if(prevMapUnit.get(prevY).prob>bestProb){
-					bestProb=prevMapUnit.get(prevY).prob;
-					bestPrev=prevY;
-				}
 			}
-			if(!mapUnit.containsKey(end_symbol)){
-				mapUnit.put(end_symbol,new VertibiUnit(bestPrev,bestProb));
-			}
+			
 			
 		}else{
 			return;
