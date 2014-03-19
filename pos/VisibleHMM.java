@@ -4,6 +4,7 @@ package pos;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 
 public class VisibleHMM {
@@ -57,10 +58,11 @@ public class VisibleHMM {
 	final static String end_symbol=Character.toString((char)4);
 	final static String unknown_word="*UNK*";
 	private HashMap<String,TransitionUnit> transition_map;
-	
+	private HashSet<String> unknown_set;
 	
 	public VisibleHMM(){
 		transition_map=new HashMap<String,TransitionUnit>();
+		unknown_set=new HashSet<String>();
 	}
 	
 	public double getTerminalTransitionProb(String yWord,String xWord){
@@ -89,6 +91,26 @@ public class VisibleHMM {
 		
 	}
 	
+	
+	public void readFileToTransitionMapSmooth(String fileName){
+		try {
+			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(fileName),"ISO-8859-1"));
+			String line=null;
+			//each time we read a line, count its words
+			while((line=reader.readLine())!=null){
+				parseLineAndCountTransitions(line);
+			}
+			//close the buffered reader
+			reader.close();
+			updateTransitionMapSmooth();
+			
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
 	public void parseLineAndCountTransitions(String line){
 		String[] words=line.split(" ");
 		
@@ -107,6 +129,14 @@ public class VisibleHMM {
 		}
 		//count each (y,x) and (y,y') pair
 		for(int i=0;i<words.length/2;i++){
+			//add each word to unknown_set if it doesn't contain this word
+			//but if it already contains this word, remove from unknown_set
+			if(unknown_set.contains(words[2*i])){
+				unknown_set.remove(words[2*i]);
+			}else{
+				unknown_set.add(words[2*i]);
+			}
+			
 			//each x is at position 2*i and each y is at position 2*i+1
 			String xWord=words[2*i],yWord=words[2*i+1];
 			if(!transition_map.containsKey(yWord)){
@@ -158,6 +188,47 @@ public class VisibleHMM {
 			}
 		}
 	}
+		
+	public void updateTransitionMapSmooth(){
+		for(String yWord:transition_map.keySet()){
+			HashMap<String,DataUnit> stateTransitionMap=transition_map.get(yWord).state_transition;
+			HashMap<String,DataUnit> terminalTransitionMap=transition_map.get(yWord).terminal_transition;
+			
+			//count the total number of Nyo(y)
+			int totalStateTransitionCount=0;
+			for(String nextY:stateTransitionMap.keySet()){
+				totalStateTransitionCount+=stateTransitionMap.get(nextY).count;
+			}
+			
+			for(String nextY:stateTransitionMap.keySet()){
+				stateTransitionMap.get(nextY).prob=(stateTransitionMap.get(nextY).count*1.0)/totalStateTransitionCount;
+			}
+			
+			//count the total number of Nyo(x,y)
+			int totalTerminalTransitionCount=0;
+			for(String xWord:terminalTransitionMap.keySet()){
+				totalTerminalTransitionCount+=terminalTransitionMap.get(xWord).count;
+				if(unknown_set.contains(xWord)){
+					totalTerminalTransitionCount++;
+				}
+			}
+			
+			int unknown_count=0;
+			for(String xWord:terminalTransitionMap.keySet()){
+				if(unknown_set.contains(xWord)){
+					unknown_count++;
+				}
+				terminalTransitionMap.get(xWord).prob=(terminalTransitionMap.get(xWord).count*1.0)/totalTerminalTransitionCount;
+				
+			}
+			
+			//put the prob of the unknown word
+			if(!yWord.equals(start_symbol)){
+				terminalTransitionMap.put(unknown_word,new DataUnit(unknown_count,unknown_count*1.0/totalTerminalTransitionCount));
+			}
+		}
+	}
+	
 	
 	public void printTransitionMap(){
 		for(String yWord:transition_map.keySet()){
@@ -309,7 +380,7 @@ public class VisibleHMM {
 	
 	public static void main(String[] args) throws IOException{
 		VisibleHMM hmm=new VisibleHMM();
-		hmm.readFileToTransitionMap(args[0]);
+		hmm.readFileToTransitionMapSmooth(args[0]);
 		//hmm.printTransitionMap();
 		hmm.readTestFileToVertibi(args[1]);
 		
