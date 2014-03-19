@@ -205,27 +205,29 @@ public class VisibleHMM {
 			}
 			
 			//count the total number of Nyo(x,y)
-			int totalTerminalTransitionCount=0;
+			int totalTerminalTransitionCount=0,unknown_count=0;
 			for(String xWord:terminalTransitionMap.keySet()){
 				totalTerminalTransitionCount+=terminalTransitionMap.get(xWord).count;
-				if(unknown_set.contains(xWord)){
+				if((!yWord.equals(start_symbol))&&unknown_set.contains(xWord)){
+					assert(terminalTransitionMap.get(xWord).count==1);
 					totalTerminalTransitionCount++;
-				}
-			}
-			
-			int unknown_count=0;
-			for(String xWord:terminalTransitionMap.keySet()){
-				if(unknown_set.contains(xWord)){
 					unknown_count++;
 				}
-				terminalTransitionMap.get(xWord).prob=(terminalTransitionMap.get(xWord).count*1.0)/totalTerminalTransitionCount;
-				
 			}
 			
-			//put the prob of the unknown word
-			if(!yWord.equals(start_symbol)){
-				terminalTransitionMap.put(unknown_word,new DataUnit(unknown_count,unknown_count*1.0/totalTerminalTransitionCount));
+			if(unknown_count==0){
+				unknown_count++;
+				totalTerminalTransitionCount++;
 			}
+			if(!yWord.equals(start_symbol)){
+				terminalTransitionMap.put(unknown_word,new DataUnit(unknown_count,0.0));
+			}
+			
+			for(String xWord:terminalTransitionMap.keySet()){
+				terminalTransitionMap.get(xWord).prob=(terminalTransitionMap.get(xWord).count*1.0)/totalTerminalTransitionCount;
+
+			}
+			
 		}
 	}
 	
@@ -293,7 +295,8 @@ public class VisibleHMM {
 		unit.total_count=words.length/2;
 		
 		for(int i=0;i<words.length/2;i++){
-			unit.correct_count=(resultList.get(i+1).word.equals(words[2*i+1])?1:0);
+		
+			unit.correct_count+=(resultList.get(i+1).word.equals(words[2*i+1])?1:0);
 		}
 		return unit;
 	}
@@ -380,11 +383,9 @@ public class VisibleHMM {
 	
 	public static void main(String[] args) throws IOException{
 		VisibleHMM hmm=new VisibleHMM();
-		hmm.readFileToTransitionMapSmooth(args[0]);
-		//hmm.printTransitionMap();
+		hmm.readFileToTransitionMap(args[0]);
+		hmm.printTransitionMap();
 		hmm.readTestFileToVertibi(args[1]);
-		
-		
 	}
 }
 
