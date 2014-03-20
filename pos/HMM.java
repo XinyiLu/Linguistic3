@@ -11,6 +11,7 @@ import java.util.HashSet;
 
 public class HMM {
 	
+	//the data unit in each transition map, contains both the count and the probability of the corresponding pair
 	class DataUnit{
 		int count;
 		double prob;
@@ -26,6 +27,7 @@ public class HMM {
 		}
 	}
 	
+	//class to save the state transition map and the terminal transition map
 	class TransitionUnit{
 		HashMap<String,DataUnit> state_transition;
 		HashMap<String,DataUnit> terminal_transition;
@@ -36,29 +38,22 @@ public class HMM {
 		}
 	}
 	
-	class VertibiUnit{
+	//unit to save its previous word and its corresponding mu
+	class ViterbiUnit{
 		String word;
 		double prob;
 		
-		public VertibiUnit(String w,double p){
+		public ViterbiUnit(String w,double p){
 			word=w;
 			prob=p;
-		}
-	}
-	
-	class PrecisionUnit{
-		int correct_count;
-		int total_count;
-		
-		public PrecisionUnit(){
-			correct_count=0;
-			total_count=0;
 		}
 	}
 	
 	final static String padding_word="*PADDING*";
 	final static String unknown_word="*UNK*";
 	private HashMap<String,TransitionUnit> transition_map;
+	
+	//these two sets are used to record those words that appear only once in the training data
 	private HashSet<String> unknown_set;
 	private HashSet<String> popular_set;
 	
@@ -68,7 +63,7 @@ public class HMM {
 		popular_set=new HashSet<String>();
 	}
 	
-
+	//read the training file and analyze it into transition_map
 	public void readFileToTransitionMap(String fileName){
 		try {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(fileName),"ISO-8859-1"));
@@ -87,6 +82,7 @@ public class HMM {
 		
 	}
 	
+	//use better estimate for transition_map
 	public void readFileToTransitionMapSmooth(String fileName){
 		try {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(fileName),"ISO-8859-1"));
@@ -106,6 +102,7 @@ public class HMM {
 		
 	}
 	
+	//parse each training line and count each state-state and state-terminal pair into transition_map
 	public void parseLineAndCountTransitions(String line){
 		String[] words=line.split(" ");
 		
@@ -154,6 +151,7 @@ public class HMM {
 		
 	}
 	
+	//calculate the probability of each state-state and state-terminal pair
 	public void updateTransitionMap(){
 		for(String yWord:transition_map.keySet()){
 			HashMap<String,DataUnit> stateTransitionMap=transition_map.get(yWord).state_transition;
@@ -186,6 +184,7 @@ public class HMM {
 		}
 	}
 	
+	//use better estimate to calculate the probability of each state-state and state-terminal pair
 	public void updateTransitionMapSmooth(){
 		for(String yWord:transition_map.keySet()){
 			HashMap<String,DataUnit> stateTransitionMap=transition_map.get(yWord).state_transition;
@@ -221,7 +220,8 @@ public class HMM {
 		}
 	}
 	
-	public void readTestFileToVertibi(String inputFile){
+	//parse the input file and print out the Viterbi tag sequences for each sentence
+	public void readTestFileToViterbi(String inputFile){
 		try {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(inputFile),"ISO-8859-1"));
 			String line=null;
@@ -234,11 +234,11 @@ public class HMM {
 					wordList.add(words[i]);
 				}
 				
-				ArrayList<HashMap<String,VertibiUnit>> vertibiMap=updateMuList(wordList);
-				ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
+				ArrayList<HashMap<String,ViterbiUnit>> viterbiMap=updateMuList(wordList);
+				ArrayList<ViterbiUnit> resultList=getMuList(viterbiMap);
 				String outputLine="";
 				for(int i=1;i<resultList.size()-1;i++){
-					VertibiUnit unit=resultList.get(i);
+					ViterbiUnit unit=resultList.get(i);
 					outputLine+=(words[2*(i-1)]+" "+unit.word+" ");
 				}
 				
@@ -252,7 +252,8 @@ public class HMM {
 			e.printStackTrace();
 		}
 	}
-	
+
+	//calculate the correct rate of our estimated tag sequences
 	public double getScore(String goldFile,String myOutput){
 		double prob=0.0;
 		try {
@@ -282,27 +283,28 @@ public class HMM {
 		return prob;
 	}
 	
-	public ArrayList<HashMap<String,VertibiUnit>> updateMuList(ArrayList<String> line){
-		ArrayList<HashMap<String,VertibiUnit>> list=new ArrayList<HashMap<String,VertibiUnit>>();
+	//entrance to recursively get the map of possible tag sequences for given sentence
+	public ArrayList<HashMap<String,ViterbiUnit>> updateMuList(ArrayList<String> line){
+		ArrayList<HashMap<String,ViterbiUnit>> list=new ArrayList<HashMap<String,ViterbiUnit>>();
 		updateMuListHelper(list,line,0);
 		return list;
 	}
 	
-	
+	//get the tau value give x,y
 	public double getTerminalTransitionProb(String yWord,String xWord){
 		HashMap<String,DataUnit> terminalTransitionMap=transition_map.get(yWord).terminal_transition;
 		return (terminalTransitionMap.containsKey(xWord)?terminalTransitionMap.get(xWord).prob:0.0);
 	}
 	
-	
-	public void updateMuListHelper(ArrayList<HashMap<String,VertibiUnit>> list,ArrayList<String> line,int i){
-		HashMap<String,VertibiUnit> mapUnit=new HashMap<String,VertibiUnit>();
+	//function to recursively get the Viterbi map of given line
+	public void updateMuListHelper(ArrayList<HashMap<String,ViterbiUnit>> list,ArrayList<String> line,int i){
+		HashMap<String,ViterbiUnit> mapUnit=new HashMap<String,ViterbiUnit>();
 		if(i==0){
-			mapUnit.put(padding_word,new VertibiUnit("",1.0));
+			mapUnit.put(padding_word,new ViterbiUnit("",1.0));
 		}else if(i<=line.size()){
 			String xWord=line.get(i-1);
 			//iterate through all possible ys after the previous ones
-			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
+			HashMap<String,ViterbiUnit> prevMapUnit=list.get(i-1);
 			for(String prevY:prevMapUnit.keySet()){
 				TransitionUnit transitionSubMap=transition_map.get(prevY);
 				for(String yWord:transitionSubMap.state_transition.keySet()){
@@ -312,7 +314,7 @@ public class HMM {
 					double tempMu=prevMapUnit.get(prevY).prob*transitionSubMap.state_transition.get(yWord).prob*
 							getTerminalTransitionProb(yWord,xWord);
 					if((!mapUnit.containsKey(yWord))||mapUnit.get(yWord).prob<tempMu){
-						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
+						mapUnit.put(yWord,new ViterbiUnit(prevY,tempMu));
 						assert(tempMu>0);
 					}
 
@@ -320,14 +322,14 @@ public class HMM {
 			}
 	
 		}else if(i==line.size()+1){
-			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
+			HashMap<String,ViterbiUnit> prevMapUnit=list.get(i-1);
 			for(String prevY:prevMapUnit.keySet()){
 				TransitionUnit transitionSubMap=transition_map.get(prevY);
 				String yWord=padding_word;
 				if(transitionSubMap.state_transition.containsKey(yWord)){
 					double tempMu=prevMapUnit.get(prevY).prob*transitionSubMap.state_transition.get(yWord).prob;
 					if((!mapUnit.containsKey(yWord))||mapUnit.get(yWord).prob<tempMu){
-						mapUnit.put(yWord,new VertibiUnit(prevY,tempMu));
+						mapUnit.put(yWord,new ViterbiUnit(prevY,tempMu));
 					}
 				}
 			}
@@ -340,21 +342,23 @@ public class HMM {
 		updateMuListHelper(list,line,i+1);
 	}
 	
-	public ArrayList<VertibiUnit> getMuList(ArrayList<HashMap<String,VertibiUnit>> vertibiMap){
-		ArrayList<VertibiUnit> muList=new ArrayList<VertibiUnit>();
-		getMuListHelper(muList,vertibiMap,padding_word,vertibiMap.size()-1);
+	//entrance to parse the Viterbi map and get the tag sequence
+	public ArrayList<ViterbiUnit> getMuList(ArrayList<HashMap<String,ViterbiUnit>> viterbiMap){
+		ArrayList<ViterbiUnit> muList=new ArrayList<ViterbiUnit>();
+		getMuListHelper(muList,viterbiMap,padding_word,viterbiMap.size()-1);
 		return muList;
 	}
 	
-	public void getMuListHelper(ArrayList<VertibiUnit> list,ArrayList<HashMap<String,VertibiUnit>> vertibiMap,String yWord,int i){
+	//function to recursively get the Viterbi sequence given the map
+	public void getMuListHelper(ArrayList<ViterbiUnit> list,ArrayList<HashMap<String,ViterbiUnit>> viterbiMap,String yWord,int i){
 		if(i<0){
 			return;
 		}
-		HashMap<String,VertibiUnit> unitMap=vertibiMap.get(i);
+		HashMap<String,ViterbiUnit> unitMap=viterbiMap.get(i);
 		
-		VertibiUnit unit=new VertibiUnit(yWord,unitMap.get(yWord).prob);
+		ViterbiUnit unit=new ViterbiUnit(yWord,unitMap.get(yWord).prob);
 		list.add(0,unit);
-		getMuListHelper(list,vertibiMap,unitMap.get(yWord).word,i-1);
+		getMuListHelper(list,viterbiMap,unitMap.get(yWord).word,i-1);
 	}
 	
 }

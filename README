@@ -1,0 +1,19 @@
+This project is named POS. It uses HMM to estimate Viterbi tag sequences for each input sentence.
+
+List of files:
+pos/HMM.java       the class that does everything: get maximum-likelihood estimates for HMM parameters sigma and tau; get Viterbi tag sequence for each input sentence; get score of estimated tag sequences. 
+
+pos/Tag.java       entrance to analyze training data, get maximum-likelihood estimates for sigmas and taus and estimate tag sequences for test data, outputs estimates to standard output. tau(y,*UNK*) is smoothed by giving it a pseudo count of 1.
+
+pos/BetterTag.java  similar to Tag.java but using a different way of calculating tau(y,*UNK*) by setting those words that appear only once in the training data to be "*UNK*".
+
+pos/Score.java     entrance to get the score of out estimated tag sequences, given the golden file and the estimated file. 
+
+tag                script to run Tag.java
+better_tag         script to run BetterTag.java
+score              script to run Score.java
+script             script to compile the project and run tag, better_tag, then run score twice on both of the two estimated files.
+
+To compile the project, run javac pos/*.java
+The score of tag result is 0.9285 while the score of better_tag result is 0.9383.
+
