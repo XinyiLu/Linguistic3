@@ -1,0 +1,5 @@
+javac pos/*.java
+./tag data/wsj2-21.txt data/wsj22.txt log1
+./better_tag data/wsj2-21.txt data/wsj22.txt log2
+./score data/wsj22.txt log1
+./score data/wsj22.txt log2

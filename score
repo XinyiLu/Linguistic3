@@ -7,7 +7,7 @@ myoutput=$2
 # calculate and print the percentage of correctly tagged words in $myoutput,
 # using $gold as the reference.
 ##############################################################################
-
+java pos.Score $1 $2
 ##############################################################################
 # Run this script with the command
 #   ./score data/wsj22.txt <output-of-tagger>

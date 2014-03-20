@@ -8,10 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import pos.VisibleHMM.DataUnit;
-import pos.VisibleHMM.PrecisionUnit;
-import pos.VisibleHMM.TransitionUnit;
-import pos.VisibleHMM.VertibiUnit;
 
 public class HMM {
 	
@@ -89,19 +85,6 @@ public class HMM {
 			e.printStackTrace();
 		}
 		
-		
-	}
-	
-	public void printTransitionMap(){
-		for(String yWord:transition_map.keySet()){
-			TransitionUnit submap=transition_map.get(yWord);
-			System.out.println("Y:\t"+yWord);
-			System.out.println("X----------------------------");
-			for(String xWord:submap.terminal_transition.keySet()){
-				System.out.print(xWord+":"+submap.terminal_transition.get(xWord).prob+"\t");
-			}
-			System.out.println("\n--------------------------");
-		}
 	}
 	
 	public void readFileToTransitionMapSmooth(String fileName){
@@ -237,71 +220,66 @@ public class HMM {
 			}	
 		}
 	}
-
 	
 	public void readTestFileToVertibi(String inputFile){
 		try {
 			BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(inputFile),"ISO-8859-1"));
 			String line=null;
-			int totalCount=0,correctCount=0;
-			//each time we read a line, count its words
 			while((line=reader.readLine())!=null){
-				/*ArrayList<HashMap<String,VertibiUnit>> vertibiMap=parseTestLineToVertibi(line);
+				String[] words=line.split(" ");
+				ArrayList<String> wordList=new ArrayList<String>();
+				assert(words.length>0&&words.length%2==0);
+				
+				for(int i=0;i<words.length;i+=2){
+					wordList.add(words[i]);
+				}
+				
+				ArrayList<HashMap<String,VertibiUnit>> vertibiMap=updateMuList(wordList);
 				ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
 				String outputLine="";
 				for(int i=1;i<resultList.size()-1;i++){
 					VertibiUnit unit=resultList.get(i);
-					outputLine+=unit.word+" ";
+					outputLine+=(words[2*(i-1)]+" "+unit.word+" ");
 				}
 				
-				System.out.println(outputLine);*/
-				
-				PrecisionUnit unit=getVertibiPrecisionFromLine(line);
-				totalCount+=unit.total_count;
-				correctCount+=unit.correct_count;
+				System.out.println(outputLine.substring(0, outputLine.length()-1));
 				
 			}
 			//close the buffered reader
 			reader.close();
-			System.out.println("correct rate is:"+correctCount+" "+totalCount+" "+correctCount*1.0/totalCount);
 			
 		}catch(IOException e){
 			e.printStackTrace();
 		}
 	}
 	
-	public PrecisionUnit getVertibiPrecisionFromLine(String line){
-		PrecisionUnit unit=new PrecisionUnit();
-		String[] words=line.split(" ");
-		ArrayList<String> wordList=new ArrayList<String>();
-		assert(words.length>0&&words.length%2==0);
-		
-		for(int i=0;i<words.length;i+=2){
-			wordList.add(words[i]);
+	public double getScore(String goldFile,String myOutput){
+		double prob=0.0;
+		try {
+			BufferedReader goldReader=new BufferedReader(new InputStreamReader(new FileInputStream(goldFile),"ISO-8859-1"));
+			BufferedReader myReader=new BufferedReader(new InputStreamReader(new FileInputStream(myOutput),"ISO-8859-1"));
+			String gline=null,mline=null;
+			int totalCount=0,correctCount=0;
+			while((gline=goldReader.readLine())!=null&&(mline=myReader.readLine())!=null){
+				String[] gwords=gline.split(" ");
+				String[] mwords=mline.split(" ");
+				assert(gwords.length==mwords.length&&gwords.length%2==0);
+				totalCount+=gwords.length/2;
+				
+				for(int i=1;i<gwords.length;i+=2){
+					correctCount+=(gwords[i].equals(mwords[i])?1:0);
+				}
+				
+			}
+			//close the buffered reader
+			goldReader.close();
+			myReader.close();
+			prob=correctCount*1.0/totalCount;
+			
+		}catch(IOException e){
+			e.printStackTrace();
 		}
-		
-		ArrayList<HashMap<String,VertibiUnit>> vertibiMap=updateMuList(wordList);
-		ArrayList<VertibiUnit> resultList=getMuList(vertibiMap);
-		unit.total_count=words.length/2;
-		
-		for(int i=0;i<words.length/2;i++){
-		
-			unit.correct_count+=(resultList.get(i+1).word.equals(words[2*i+1])?1:0);
-		}
-		return unit;
-	}
-
-	
-	public ArrayList<HashMap<String,VertibiUnit>> parseTestLineToVertibi(String line){
-		String[] words=line.split(" ");
-		ArrayList<String> wordList=new ArrayList<String>();
-		assert(words.length>0&&words.length%2==0);
-		
-		for(int i=0;i<words.length;i+=2){
-			wordList.add(words[i]);
-		}
-		
-		return updateMuList(wordList);
+		return prob;
 	}
 	
 	public ArrayList<HashMap<String,VertibiUnit>> updateMuList(ArrayList<String> line){
@@ -340,16 +318,6 @@ public class HMM {
 
 				}
 			}
-			
-			//normalization
-			double totalProb=0.0;
-			for(String yWord:mapUnit.keySet()){
-				totalProb+=mapUnit.get(yWord).prob;
-			}
-			for(String yWord:mapUnit.keySet()){
-				VertibiUnit vUnit=mapUnit.get(yWord);
-				vUnit.prob=vUnit.prob/totalProb;
-			}
 	
 		}else if(i==line.size()+1){
 			HashMap<String,VertibiUnit> prevMapUnit=list.get(i-1);
@@ -363,7 +331,6 @@ public class HMM {
 					}
 				}
 			}
-			//This step doesn't need normalization
 			
 		}else{
 			return;
@@ -388,13 +355,6 @@ public class HMM {
 		VertibiUnit unit=new VertibiUnit(yWord,unitMap.get(yWord).prob);
 		list.add(0,unit);
 		getMuListHelper(list,vertibiMap,unitMap.get(yWord).word,i-1);
-	}
-	
-	public static void main(String[] args) throws IOException{
-		HMM hmm=new HMM();
-		hmm.readFileToTransitionMapSmooth(args[0]);
-
-		hmm.readTestFileToVertibi(args[1]);
 	}
 	
 }
